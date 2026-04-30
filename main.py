@@ -4,7 +4,7 @@ import time
 
 app = FastAPI()
 
-# 🔥 DATABASE URL (جاهز من بياناتك)
+# 🔥 DATABASE
 DATABASE_URL = "postgresql://postgres.ffrjmkgzhbkhiksrvlcp:11223344mmddmM%40%40@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
 
 def get_db():
@@ -19,13 +19,16 @@ def safe_close(cur=None, db=None):
     except:
         pass
 
-# 🧠 تخزين مؤقت (RAM)
+# 🧠 RAM
 requests_log = {}
 
 @app.get("/")
 def home():
     return {"message": "Bot Detector Running 🤖"}
 
+# =========================
+# 🔍 DETECT
+# =========================
 @app.post("/detect")
 def detect(data: dict):
 
@@ -36,12 +39,12 @@ def detect(data: dict):
     score = 0
     reasons = []
 
-    # 🧠 User-Agent detection
+    # User-Agent
     if any(x in ua.lower() for x in ["python", "curl", "bot", "scraper"]):
         score += 50
         reasons.append("suspicious user-agent")
 
-    # ⚡ Speed detection
+    # Speed
     now = time.time()
 
     if ip not in requests_log:
@@ -55,7 +58,7 @@ def detect(data: dict):
         score += 40
         reasons.append("high request rate")
 
-    # 🎯 النتيجة
+    # Result
     if score >= 70:
         result = "bot"
     elif score >= 40:
@@ -63,7 +66,7 @@ def detect(data: dict):
     else:
         result = "human"
 
-    # 💾 حفظ في الداتابيس
+    # 💾 Save
     cur = None
     db = None
 
@@ -85,12 +88,20 @@ def detect(data: dict):
         safe_close(cur, db)
 
     return {
+        "result": result,
+        "score": score,
+        "reasons": reasons
+    }
 
-
-        @app.get("/stats")
+# =========================
+# 📊 STATS
+# =========================
+@app.get("/stats")
 def stats():
-    db = None
+
     cur = None
+    db = None
+
     try:
         db = get_db()
         cur = db.cursor()
@@ -114,11 +125,4 @@ def stats():
         return {"error": str(e)}
 
     finally:
-        if cur:
-            cur.close()
-        if db:
-            db.close()
-        "result": result,
-        "score": score,
-        "reasons": reasons
-    }
+        safe_close(cur, db)
