@@ -4,20 +4,13 @@ import psycopg2
 
 app = FastAPI()
 
-# 🔥 DATABASE CONFIG (عدّل الباسورد فقط)
-DATABASE_CONFIG = {
-    "host": "aws-1-ap-northeast-2.pooler.supabase.com",
-    "port": 6543,
-    "dbname": "postgres",
-    "user": "postgres.nuocuctzsidctyohecep",
-    "password": "11223344mmddmM@@",
-    "sslmode": "require"
-}
+# 🔥 انسخ هذا من Supabase (Connect → Transaction pooler)
+DATABASE_URL = "postgresql://postgres.xxxxx:PASSWORD@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres"
 
 def get_db():
-    return psycopg2.connect(**DATABASE_CONFIG)
+    return psycopg2.connect(DATABASE_URL)
 
-# 🧠 تخزين مؤقت للطلبات (RAM)
+# RAM storage
 requests_log = {}
 
 @app.get("/")
@@ -34,12 +27,12 @@ def detect(data: dict):
     score = 0
     reasons = []
 
-    # 🧠 1) User-Agent check
+    # 🧠 User-Agent check
     if any(bot in ua.lower() for bot in ["python", "curl", "bot", "scraper"]):
         score += 50
         reasons.append("suspicious user-agent")
 
-    # ⚡ 2) Speed check
+    # ⚡ Speed check
     now = time.time()
 
     if ip not in requests_log:
@@ -53,7 +46,7 @@ def detect(data: dict):
         score += 40
         reasons.append("high request rate")
 
-    # 🎯 تحديد النتيجة
+    # 🎯 result
     if score >= 70:
         result = "bot"
     elif score >= 40:
@@ -61,10 +54,7 @@ def detect(data: dict):
     else:
         result = "human"
 
-    # 💾 حفظ في الداتابيس
-    db = None
-    cur = None
-
+    # 💾 SAVE TO DATABASE
     try:
         db = get_db()
         cur = db.cursor()
@@ -76,14 +66,11 @@ def detect(data: dict):
 
         db.commit()
 
+        cur.close()
+        db.close()
+
     except Exception as e:
         print("DB ERROR:", e)
-
-    finally:
-        if cur:
-            cur.close()
-        if db:
-            db.close()
 
     return {
         "result": result,
