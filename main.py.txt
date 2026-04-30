@@ -1,9 +1,23 @@
 from fastapi import FastAPI
 import time
+import psycopg2
 
 app = FastAPI()
 
-# تخزين مؤقت (RAM)
+# 🔥 DATABASE CONFIG (عدّل الباسورد فقط)
+DATABASE_CONFIG = {
+    "host": "aws-1-ap-northeast-2.pooler.supabase.com",
+    "port": 6543,
+    "dbname": "postgres",
+    "user": "postgres.nuocuctzsidctyohecep",
+    "password": "YOUR_PASSWORD_HERE",
+    "sslmode": "require"
+}
+
+def get_db():
+    return psycopg2.connect(**DATABASE_CONFIG)
+
+# 🧠 تخزين مؤقت للطلبات (RAM)
 requests_log = {}
 
 @app.get("/")
@@ -20,7 +34,7 @@ def detect(data: dict):
     score = 0
     reasons = []
 
-    # 🧠 1) User-Agent
+    # 🧠 1) User-Agent check
     if any(bot in ua.lower() for bot in ["python", "curl", "bot", "scraper"]):
         score += 50
         reasons.append("suspicious user-agent")
@@ -39,13 +53,37 @@ def detect(data: dict):
         score += 40
         reasons.append("high request rate")
 
-    # 🎯 النتيجة
+    # 🎯 تحديد النتيجة
     if score >= 70:
         result = "bot"
     elif score >= 40:
         result = "medium"
     else:
         result = "human"
+
+    # 💾 حفظ في الداتابيس
+    db = None
+    cur = None
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        cur.execute("""
+            INSERT INTO bot_logs (ip, user_agent, path, score, result)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (ip, ua, path, score, result))
+
+        db.commit()
+
+    except Exception as e:
+        print("DB ERROR:", e)
+
+    finally:
+        if cur:
+            cur.close()
+        if db:
+            db.close()
 
     return {
         "result": result,
