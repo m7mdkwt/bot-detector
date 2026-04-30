@@ -1,0 +1,54 @@
+from fastapi import FastAPI
+import time
+
+app = FastAPI()
+
+# تخزين مؤقت (RAM)
+requests_log = {}
+
+@app.get("/")
+def home():
+    return {"message": "Bot Detector Running 🤖"}
+
+@app.post("/detect")
+def detect(data: dict):
+
+    ip = data.get("ip")
+    ua = data.get("user_agent", "")
+    path = data.get("path", "/")
+
+    score = 0
+    reasons = []
+
+    # 🧠 1) User-Agent
+    if any(bot in ua.lower() for bot in ["python", "curl", "bot", "scraper"]):
+        score += 50
+        reasons.append("suspicious user-agent")
+
+    # ⚡ 2) Speed check
+    now = time.time()
+
+    if ip not in requests_log:
+        requests_log[ip] = []
+
+    requests_log[ip].append(now)
+
+    recent = [t for t in requests_log[ip] if now - t < 10]
+
+    if len(recent) > 10:
+        score += 40
+        reasons.append("high request rate")
+
+    # 🎯 النتيجة
+    if score >= 70:
+        result = "bot"
+    elif score >= 40:
+        result = "medium"
+    else:
+        result = "human"
+
+    return {
+        "result": result,
+        "score": score,
+        "reasons": reasons
+    }
