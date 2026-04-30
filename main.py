@@ -4,25 +4,22 @@ import time
 
 app = FastAPI()
 
-# 🔥 DATABASE (تأكد من USER الصحيح من Supabase)
-DATABASE_CONFIG = {
-  host:
-aws-1-ap-northeast-1.pooler.supabase.com
-
-port:
-6543
-
-database:
-postgres
-
-user:
-postgres.ffrjmkgzhbkhiksrvlcp
-
-}
+# 🔥 DATABASE URL (جاهز من بياناتك)
+DATABASE_URL = "postgresql://postgres.ffrjmkgzhbkhiksrvlcp:11223344mmddmM%40%40@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
 
+def safe_close(cur=None, db=None):
+    try:
+        if cur:
+            cur.close()
+        if db:
+            db.close()
+    except:
+        pass
+
+# 🧠 تخزين مؤقت (RAM)
 requests_log = {}
 
 @app.get("/")
@@ -39,10 +36,12 @@ def detect(data: dict):
     score = 0
     reasons = []
 
-    if any(x in ua.lower() for x in ["python", "curl", "bot"]):
+    # 🧠 User-Agent detection
+    if any(x in ua.lower() for x in ["python", "curl", "bot", "scraper"]):
         score += 50
-        reasons.append("bad user agent")
+        reasons.append("suspicious user-agent")
 
+    # ⚡ Speed detection
     now = time.time()
 
     if ip not in requests_log:
@@ -54,15 +53,20 @@ def detect(data: dict):
 
     if len(recent) > 10:
         score += 40
-        reasons.append("too many requests")
+        reasons.append("high request rate")
 
-    result = "human"
+    # 🎯 النتيجة
     if score >= 70:
         result = "bot"
     elif score >= 40:
         result = "medium"
+    else:
+        result = "human"
 
-    # 💾 save
+    # 💾 حفظ في الداتابيس
+    cur = None
+    db = None
+
     try:
         db = get_db()
         cur = db.cursor()
@@ -73,11 +77,12 @@ def detect(data: dict):
         """, (ip, ua, path, score, result))
 
         db.commit()
-        cur.close()
-        db.close()
 
     except Exception as e:
-        print("DB ERROR:", e)
+        print("🔥 DB ERROR:", e)
+
+    finally:
+        safe_close(cur, db)
 
     return {
         "result": result,
