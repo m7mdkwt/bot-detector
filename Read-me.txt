@@ -1,0 +1,17 @@
+# 🤖 Bot Detector API
+
+Simple security API to detect bots based on:
+- User-Agent
+- Request speed
+
+## 🚀 Endpoints
+
+POST /detect
+
+## 📊 Features
+- Bot detection
+- Logging to database
+- Ready for scaling
+
+## 🌍 Live API
+Deployed on Render
