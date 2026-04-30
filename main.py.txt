@@ -10,7 +10,7 @@ DATABASE_CONFIG = {
     "port": 6543,
     "dbname": "postgres",
     "user": "postgres.nuocuctzsidctyohecep",
-    "password": "YOUR_PASSWORD_HERE",
+    "password": "11223344mmddmM@@",
     "sslmode": "require"
 }
 
