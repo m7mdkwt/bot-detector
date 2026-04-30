@@ -85,6 +85,39 @@ def detect(data: dict):
         safe_close(cur, db)
 
     return {
+
+
+        @app.get("/stats")
+def stats():
+    db = None
+    cur = None
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        cur.execute("SELECT COUNT(*) FROM bot_logs WHERE result='human'")
+        human = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM bot_logs WHERE result='medium'")
+        medium = cur.fetchone()[0]
+
+        cur.execute("SELECT COUNT(*) FROM bot_logs WHERE result='bot'")
+        bot = cur.fetchone()[0]
+
+        return {
+            "human": human,
+            "medium": medium,
+            "bot": bot
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+    finally:
+        if cur:
+            cur.close()
+        if db:
+            db.close()
         "result": result,
         "score": score,
         "reasons": reasons
